@@ -31,13 +31,12 @@ io.on('connection', (socket) => {
         socket.join('Agent');
     }
     socket.on('clientSendQuery', (data) => {
-        socket.to('Agent').emit('agentReceiveQuery',data);
+        io.to('Agent').emit('agentReceiveQuery',data);
     });
     socket.on('agentAnswerQuery', (data) => {
         socket.to(data.clientId).emit('clientReceiveAnswer', data);
     })
     socket.on('disconnect', () => {
-        console.log('Disconnected')
     })
 });
 
