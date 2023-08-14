@@ -8,7 +8,6 @@ require('./Database/Connection');
 
 const { register } = require("./controller/register");
 
-// web socket server
 const io = new Server(server, {
     cors: {
         origin: '*'
@@ -17,28 +16,28 @@ const io = new Server(server, {
 
 app.use(express.json());
 
-// cors handling
 app.use(cors({
     origin: '*'
 }))
 
-// api end points
 app.post('/register', register);
 
 io.on('connection', (socket) => {
     const { _id, name, role } = socket.handshake.query;
     if (role === 'Client') {
         socket.join(_id);
-        const room = io.sockets.adapter.rooms;
-        console.log(room);
     }
     if (role === 'Agent') {
         socket.join('Agent');
-        const room = io.sockets.adapter.rooms;
-        console.log(room);
     }
+    socket.on('clientSendQuery', (data) => {
+        socket.to('Agent').emit('agentReceiveQuery',data);
+    });
+    socket.on('agentAnswerQuery', (data) => {
+        socket.to(data.clientId).emit('clientReceiveAnswer', data);
+    })
     socket.on('disconnect', () => {
-        console.log('Dis')
+        console.log('Disconnected')
     })
 });
 
