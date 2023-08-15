@@ -31,13 +31,28 @@ io.on('connection', (socket) => {
         socket.join('Agent');
     }
     socket.on('clientSendQuery', (data) => {
-        io.to('Agent').emit('agentReceiveQuery',data);
+        const regex1 = new RegExp('Loan', 'i');
+        const regex2 = new RegExp('Payment', 'i');
+        const regex3 = new RegExp('Pay', 'i');
+        if (regex1.test(data?.chat)) {
+            data = { ...data, priority: '0' };
+        }
+        else if (regex2.test(data?.chat) || regex3.test(data?.chat)) {
+            data = { ...data, priority: '1' };
+        }
+        else {
+            data = { ...data, priority: '2' };
+        }
+        io.to('Agent').emit('agentReceiveQuery', data);
     });
     socket.on('agentAnswerQuery', (data) => {
         socket.to(data.clientId).emit('clientReceiveAnswer', data);
-    })
+    });
+    socket.on('agentJoinRoom', (data) => {
+        // socket.join(data?.roomType);
+    });
     socket.on('disconnect', () => {
-    })
+    });
 });
 
 module.exports = server;
