@@ -1,13 +1,48 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { socket } from "../../socket";
 import { useNavigate } from "react-router-dom";
+import { totalPendingQuery } from "../../Api";
 const Room = () => {
     const navigate = useNavigate();
+    const [pendingLowPriorityQuery, setPendingLowPriorityQuery] = useState(0);
+    const [pendingMediumPriorityQuery, setPendingMediumPriorityQuery] = useState(0);
+    const [pendingHighPriorityQuery, setPendingHighPriorityQuery] = useState(0);
     const enterIntoRoom = (roomType) => {
         const data = { roomType };
         socket.emit('agentJoinRoom', data);
         navigate(`/home?roomType=${roomType}`);
     };
+    const totalPendingQueries = async () => {
+        const response = await totalPendingQuery();
+        setPendingLowPriorityQuery(response?.data?.totalPendingQuery[0])
+        setPendingMediumPriorityQuery(response?.data?.totalPendingQuery[1]);
+        setPendingHighPriorityQuery(response?.data?.totalPendingQuery[2]);
+    }
+    useEffect(() => {
+        if (localStorage.getItem('name') === null) {
+            navigate('/');
+        }
+        else {
+            if (localStorage.getItem('role') === 'Agent') {
+                if (!socket.connected) {
+                    socket.connect();
+                }
+            }
+        }
+        totalPendingQueries();
+        socket.on('agentReceiveQuery', (data) => {
+            const { totalPendingQuery } = data;
+            localStorage.setItem('pendingLowPriorityQuery', totalPendingQuery[0]);
+            localStorage.setItem('pendingMediumPriorityQuery', totalPendingQuery[1]);
+            localStorage.setItem('pendingHighPriorityQuery', totalPendingQuery[2]);
+            setPendingLowPriorityQuery(totalPendingQuery[0]);
+            setPendingMediumPriorityQuery(totalPendingQuery[1]);
+            setPendingHighPriorityQuery(totalPendingQuery[2]);
+            return () => {
+                socket.removeListener('agentReceiveQuery');
+            }
+        });
+    }, [navigate]);
     return (
         <div className="bg-slate-600 h-screen w-screen">
             <h1 style={{ fontSize: '5vh' }} className="text-center text-white">Join Room</h1>
@@ -19,7 +54,7 @@ const Room = () => {
                     <figcaption className="flex items-center justify-center space-x-3">
                         <div className="space-y-0.5 font-medium dark:text-white text-left">
                             <h3 className="text-lg font-semibold text-white">Total Pending Queries</h3>
-                            <div className="text-sm text-white text-center">1</div>
+                            <div className="text-sm text-white text-center">{pendingLowPriorityQuery}</div>
                         </div>
                     </figcaption>
                 </figure>
@@ -30,7 +65,7 @@ const Room = () => {
                     <figcaption className="flex items-center justify-center space-x-3">
                         <div className="space-y-0.5 font-medium dark:text-white text-left">
                             <h3 className="text-lg font-semibold text-yellow-500">Total Pending Queries</h3>
-                            <div className="text-sm text-yellow-500 text-center">2</div>
+                            <div className="text-sm text-yellow-500 text-center">{pendingMediumPriorityQuery}</div>
                         </div>
                     </figcaption>
                 </figure>
@@ -41,7 +76,7 @@ const Room = () => {
                     <figcaption className="flex items-center justify-center space-x-3">
                         <div className="space-y-0.5 font-medium dark:text-white text-left">
                             <h3 className="text-lg font-semibold text-red-500">Total Pending Queries</h3>
-                            <div className="text-sm text-red-500 text-center">3</div>
+                            <div className="text-sm text-red-500 text-center">{pendingHighPriorityQuery}</div>
                         </div>
                     </figcaption>
                 </figure>

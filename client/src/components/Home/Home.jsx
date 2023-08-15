@@ -5,6 +5,7 @@ const Home = () => {
     const navigate = useNavigate();
     const [chat, setChat] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
+    const [url, setUrl] = useState(window.location.href);
     const handleQuery = (e) => {
         setChat(e.target.value);
     };
@@ -48,26 +49,36 @@ const Home = () => {
         navigate('/room');
     }
     useEffect(() => {
-        socket.on('agentReceiveQuery', (data) => {
-            const { _id, name, role, chat, priority } = data;
-            localStorage.setItem('clientId', data._id);
-            setChatHistory((prevValue) => {
-                return [...prevValue, { _id, name, role, chat, priority }]
-            });
-        });
         socket.on('clientReceiveAnswer', (data) => {
             const { _id, name, role, chat } = data;
             setChatHistory((prevValue) => {
                 return [...prevValue, { _id, name, role, chat }]
             });
+            console.log('Event clientReceiveAnswer is active');
         });
+        return () => {
+            socket.removeListener('agentReceiveQuery');
+            socket.removeListener('clientReceiveAnswer');
+        }
     }, []);
     useEffect(() => {
         if (localStorage.getItem('name') === null) {
             navigate('/');
         }
         else {
-            socket.connect();
+            if (localStorage.getItem('role') === 'Client') {
+                if (!socket.connected) {
+                    socket.connect();
+                }
+            }
+        }
+        return () => {
+            const url = new URL(window.location.href);
+            const params = new URLSearchParams(url.search);
+            const data = {
+                roomType: params.get('roomType')
+            }
+            socket.emit('agentLeaveRoom', data);
         }
     }, [navigate]);
     return (

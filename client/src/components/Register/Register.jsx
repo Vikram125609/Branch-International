@@ -23,14 +23,24 @@ const Register = () => {
             localStorage.setItem('_id', response?.data?.user?._id)
             localStorage.setItem('name', response?.data?.user?.name)
             localStorage.setItem('role', response?.data?.user?.role)
-            navigate('/home');
+            if (localStorage.getItem('role') === 'Client') {
+                navigate('/home');
+            }
+            else {
+                navigate('/room');
+            }
         } catch (error) {
             console.log(error);
         }
     };
     useEffect(() => {
         if (localStorage.getItem('name') != null) {
-            navigate('/home');
+            if (localStorage.getItem('role') === 'Client') {   
+                navigate('/home');
+            }
+            else {
+                navigate('/room');
+            }
         }
     }, [navigate]);
     return (
