@@ -4,11 +4,11 @@ const midPriorityMessage = require("../model/midPriorityMessage");
 
 const totalPendingQuery = (req, res, next) => {
     const totalPendingQuery = [];
-    lowPriorityMessage.find({ ans: "" }).countDocuments().then((data) => {
+    lowPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
         totalPendingQuery.push(data);
-        midPriorityMessage.find({ ans: "" }).countDocuments().then((data) => {
+        midPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
             totalPendingQuery.push(data);
-            highPriorityMessage.find({ ans: "" }).countDocuments().then((data) => {
+            highPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
                 totalPendingQuery.push(data);
                 res.status(200).json({
                     success: true,
@@ -20,4 +20,49 @@ const totalPendingQuery = (req, res, next) => {
     })
 };
 
-module.exports = { totalPendingQuery };
+const replyToClient = (req, res, next) => {
+    let collection
+    const { ans, messageId, replyMessagePriority } = req.body;
+    console.log(req.body);
+    if (replyMessagePriority === '0') {
+        collection = require('./../model/highPriorityMessage');
+        try {
+            collection.findByIdAndUpdate(messageId, {
+                $push: {
+                    'ans': ans
+                }
+            }).then(() => { });
+        } catch (error) {
+            console.log(error);
+        }
+    }
+    else if (replyMessagePriority === '1') {
+        collection = require('./../model/midPriorityMessage');
+        try {
+            collection.findByIdAndUpdate(messageId, {
+                $push: {
+                    'ans': ans
+                }
+            }).then(() => { });
+        } catch (error) {
+            console.log(error);
+        }
+    }
+    else {
+        collection = require('./../model/lowPriorityMessage');
+        try {
+            collection.findByIdAndUpdate(messageId, {
+                $push: {
+                    'ans': ans
+                }
+            }).then(() => { });
+        } catch (error) {
+            console.log(error);
+        }
+    }
+    res.status(200).json({
+        success: true,
+    })
+};
+
+module.exports = { totalPendingQuery, replyToClient };

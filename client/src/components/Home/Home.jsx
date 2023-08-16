@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { socket } from "../../socket";
 import { useNavigate } from "react-router-dom";
+import { replyToClient } from "../../Api";
 const Home = () => {
     const navigate = useNavigate();
     const [chat, setChat] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
-    const [url, setUrl] = useState(window.location.href);
+    const [replyClientId, setReplyClientId] = useState('');
+    const [messageId, setMessageId] = useState('');
+    const [replyMessagePriority, setReplyMessagePriority] = useState('');
     const handleQuery = (e) => {
         setChat(e.target.value);
     };
@@ -29,7 +32,7 @@ const Home = () => {
         }
         else {
             socket.emit('agentAnswerQuery', {
-                clientId: localStorage.getItem('clientId'),
+                clientId: replyClientId,
                 name: localStorage.getItem('name'),
                 role: localStorage.getItem('role'),
                 chat: chat
@@ -41,6 +44,14 @@ const Home = () => {
                     role: localStorage.getItem('role'),
                     chat: chat
                 }]
+            });
+            const data = {
+                ans: chat,
+                messageId: messageId,
+                replyMessagePriority: replyMessagePriority
+            };
+            replyToClient(data).then(() => {
+                console.log('Successfully Updated');
             });
             setChat('');
         }
@@ -54,12 +65,35 @@ const Home = () => {
             setChatHistory((prevValue) => {
                 return [...prevValue, { _id, name, role, chat }]
             });
-            console.log('Event clientReceiveAnswer is active');
         });
         return () => {
-            socket.removeListener('agentReceiveQuery');
             socket.removeListener('clientReceiveAnswer');
         }
+    }, []);
+    useEffect(() => {
+        socket.on('queryInMediumPriorityRoom', (data) => {
+            const { _id, name, role, chat, priority, messageId } = data;
+            setChatHistory((prevValue) => {
+                return [...prevValue, { _id, name, role, chat, priority, messageId }];
+            });
+        });
+        socket.on('queryInLowPriorityRoom', (data) => {
+            const { _id, name, role, chat, priority, messageId } = data;
+            setChatHistory((prevValue) => {
+                return [...prevValue, { _id, name, role, chat, priority, messageId }];
+            });
+        });
+        socket.on('queryInHighPriorityRoom', (data) => {
+            const { _id, name, role, chat, priority, messageId } = data;
+            setChatHistory((prevValue) => {
+                return [...prevValue, { _id, name, role, chat, priority, messageId }];
+            });
+        });
+        return () => {
+            socket.removeListener('queryInMediumPriorityRoom');
+            socket.removeListener('queryInLowPriorityRoom');
+            socket.removeListener('queryInHighPriorityRoom');
+        };
     }, []);
     useEffect(() => {
         if (localStorage.getItem('name') === null) {
@@ -90,7 +124,7 @@ const Home = () => {
                 </button>) : (<span></span>)
             }
             <div className="flex flex-col">
-                <div style={{ height: '85vh', width: '100vw' }} className="">
+                <div style={{ height: `${localStorage.getItem('role') === 'Agent' ? '80vh' : '85vh'}`, width: '100vw' }} className="">
                     {
                         chatHistory.map((message, id) => {
                             return (
@@ -116,7 +150,7 @@ const Home = () => {
                                                 {
                                                     message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
                                                         (
-                                                            <button>Reply</button>
+                                                            <button onClick={() => { setReplyClientId(message._id); setMessageId(message.messageId); setReplyMessagePriority(message.priority); }}>{replyClientId === message._id ? 'Active' : 'Reply'}</button>
                                                         )
                                                         : (
                                                             <span></span>
@@ -152,7 +186,7 @@ const Home = () => {
                                                     {
                                                         message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
                                                             (
-                                                                <button style={{ backgroundColor: 'rgba(46, 204, 113)' }} className="rounded-full text-white mx-1 px-1" >Reply</button>
+                                                                <button onClick={() => { setReplyClientId(message._id); setMessageId(message.messageId); setReplyMessagePriority(message.priority); }} style={{ backgroundColor: 'rgba(46, 204, 113)' }} className="rounded-full text-white mx-1 px-1" >{replyClientId === message._id ? 'Active' : 'Reply'}</button>
                                                             )
                                                             : (
                                                                 <span></span>

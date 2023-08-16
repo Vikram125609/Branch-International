@@ -21,8 +21,8 @@ const messageSchema = new Schema({
         default: ""
     },
     ans: {
-        type: String,
-        default: ""
+        type: Array,
+        default: [],
     },
     priority: {
         type: String,

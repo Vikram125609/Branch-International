@@ -10,7 +10,7 @@ const { register } = require("./controller/register");
 const highPriorityMessage = require("./model/highPriorityMessage");
 const midPriorityMessage = require("./model/midPriorityMessage");
 const lowPriorityMessage = require("./model/lowPriorityMessage");
-const { totalPendingQuery } = require("./controller/query");
+const { totalPendingQuery, replyToClient } = require("./controller/query");
 
 const io = new Server(server, {
     cors: {
@@ -26,9 +26,9 @@ app.use(cors({
 
 app.post('/register', register);
 app.get('/totalPendingQuery', totalPendingQuery);
+app.post('/replyToClient', replyToClient)
 
 io.on('connection', (socket) => {
-    console.log('connected');
     const { _id, name, role } = socket.handshake.query;
     if (role === 'Client') {
         socket.join(_id);
@@ -49,7 +49,9 @@ io.on('connection', (socket) => {
                 query: data?.chat
             });
             message.save().then(() => { });
-            socket.to('highPriorityRoom').emit('queryInHighPriorityRoom', data);;
+            data = { ...data, messageId: message._id.toString() };
+            console.log(data);
+            socket.to('highPriorityRoom').emit('queryInHighPriorityRoom', data);
         }
         else if (regex2.test(data?.chat) || regex3.test(data?.chat)) {
             data = { ...data, priority: '1' };
@@ -60,6 +62,8 @@ io.on('connection', (socket) => {
                 query: data?.chat
             });
             message.save().then(() => { });
+            data = { ...data, messageId: message._id.toString() };
+            console.log(data);
             socket.to('mediumPriorityRoom').emit('queryInMediumPriorityRoom', data);;
         }
         else {
@@ -70,7 +74,9 @@ io.on('connection', (socket) => {
                 clientId: data?._id,
                 query: data?.chat
             });
-            message.save().then(() => { console.log('Message is saved successfully') });
+            message.save().then(() => { });
+            data = { ...data, messageId: message._id.toString() };
+            console.log(data);
             socket.to('lowPriorityRoom').emit('queryInLowPriorityRoom', data);;
         }
         const totalPendingQuery = [];
@@ -97,9 +103,7 @@ io.on('connection', (socket) => {
         socket.leave(roomType);
 
     });
-    socket.on('disconnect', () => {
-        console.log('Disconnected');
-    });
+    socket.on('disconnect', () => { });
 });
 
 module.exports = server;
