@@ -23,7 +23,6 @@ const totalPendingQuery = (req, res, next) => {
 const replyToClient = (req, res, next) => {
     let collection
     const { ans, messageId, replyMessagePriority } = req.body;
-    console.log(req.body);
     if (replyMessagePriority === '0') {
         collection = require('./../model/highPriorityMessage');
         try {

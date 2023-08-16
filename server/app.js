@@ -28,6 +28,9 @@ app.post('/register', register);
 app.get('/totalPendingQuery', totalPendingQuery);
 app.post('/replyToClient', replyToClient)
 
+const queriesPickedMessageToAgent = {}
+const queriesPickedAgentToMessage = {}
+
 io.on('connection', (socket) => {
     const { _id, name, role } = socket.handshake.query;
     if (role === 'Client') {
@@ -50,7 +53,6 @@ io.on('connection', (socket) => {
             });
             message.save().then(() => { });
             data = { ...data, messageId: message._id.toString() };
-            console.log(data);
             socket.to('highPriorityRoom').emit('queryInHighPriorityRoom', data);
         }
         else if (regex2.test(data?.chat) || regex3.test(data?.chat)) {
@@ -63,7 +65,6 @@ io.on('connection', (socket) => {
             });
             message.save().then(() => { });
             data = { ...data, messageId: message._id.toString() };
-            console.log(data);
             socket.to('mediumPriorityRoom').emit('queryInMediumPriorityRoom', data);;
         }
         else {
@@ -76,15 +77,14 @@ io.on('connection', (socket) => {
             });
             message.save().then(() => { });
             data = { ...data, messageId: message._id.toString() };
-            console.log(data);
             socket.to('lowPriorityRoom').emit('queryInLowPriorityRoom', data);;
         }
         const totalPendingQuery = [];
-        lowPriorityMessage.find({ ans: "" }).countDocuments().then((data) => {
+        lowPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
             totalPendingQuery.push(data);
-            midPriorityMessage.find({ ans: "" }).countDocuments().then((data) => {
+            midPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
                 totalPendingQuery.push(data);
-                highPriorityMessage.find({ ans: "" }).countDocuments().then((data) => {
+                highPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
                     totalPendingQuery.push(data);
                     io.to('Agent').emit('agentReceiveQuery', { totalPendingQuery });
                 })
@@ -102,6 +102,25 @@ io.on('connection', (socket) => {
         const { roomType } = data;
         socket.leave(roomType);
 
+    });
+    socket.on('agentPickQuestion', (data) => {
+        const { messageId, agentId } = data;
+        // if (queriesPickedMessageToAgent[messageId] === undefined & queriesPickedAgentToMessage[agentId] === undefined) {
+        //     queriesPickedMessageToAgent[messageId] = agentId;
+        //     queriesPickedAgentToMessage[agentId] = messageId;
+        //     socket.emit('agentPickedQuestion', { message: 'Picked Question Successfully', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
+        // }
+        // else if (queriesPickedAgentToMessage[agentId] != undefined & queriesPickedMessageToAgent[messageId] === undefined) {
+        //     queriesPickedMessageToAgent[queriesPickedAgentToMessage[agentId]] = undefined;
+        //     queriesPickedMessageToAgent[messageId] = agentId;
+        //     queriesPickedAgentToMessage[agentId] = messageId;
+        //     console.log(queriesPickedMessageToAgent);
+        //     console.log(queriesPickedAgentToMessage);
+        //     socket.emit('agentPickedQuestion', { message: 'Picked Question Successfully and dropend previous one', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
+        // }
+        // else {
+        //     socket.emit('agentPickedQuestion', { message: 'Question Picked By Another Agent', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
+        // }
     });
     socket.on('disconnect', () => { });
 });

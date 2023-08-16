@@ -56,6 +56,12 @@ const Home = () => {
             setChat('');
         }
     };
+    const pick = (messageId) => {
+        const data = {
+            messageId, agentId: localStorage.getItem('_id')
+        }
+        socket.emit('agentPickQuestion', data)
+    };
     const backToRoom = () => {
         navigate('/room');
     }
@@ -66,8 +72,12 @@ const Home = () => {
                 return [...prevValue, { _id, name, role, chat }]
             });
         });
+        socket.on('agentPickedQuestion', (data) => {
+            console.log(data);
+        });
         return () => {
             socket.removeListener('clientReceiveAnswer');
+            socket.removeListener('agentPickedQuestion');
         }
     }, []);
     useEffect(() => {
@@ -159,7 +169,7 @@ const Home = () => {
                                                 {
                                                     message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
                                                         (
-                                                            <button>Pick</button>
+                                                            <button onClick={() => pick(message.messageId)}>Pick</button>
                                                         )
                                                         : (
                                                             <span></span>
@@ -195,7 +205,7 @@ const Home = () => {
                                                     {
                                                         message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
                                                             (
-                                                                <button style={{ backgroundColor: 'rgba(46, 204, 113)' }} className="rounded-full text-white mx-1 px-1">Pick</button>
+                                                                <button onClick={() => pick(message.messageId)} style={{ backgroundColor: 'rgba(46, 204, 113)' }} className="rounded-full text-white mx-1 px-1">Pick</button>
                                                             )
                                                             : (
                                                                 <span></span>
