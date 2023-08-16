@@ -105,22 +105,23 @@ io.on('connection', (socket) => {
     });
     socket.on('agentPickQuestion', (data) => {
         const { messageId, agentId } = data;
-        // if (queriesPickedMessageToAgent[messageId] === undefined & queriesPickedAgentToMessage[agentId] === undefined) {
-        //     queriesPickedMessageToAgent[messageId] = agentId;
-        //     queriesPickedAgentToMessage[agentId] = messageId;
-        //     socket.emit('agentPickedQuestion', { message: 'Picked Question Successfully', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
-        // }
-        // else if (queriesPickedAgentToMessage[agentId] != undefined & queriesPickedMessageToAgent[messageId] === undefined) {
-        //     queriesPickedMessageToAgent[queriesPickedAgentToMessage[agentId]] = undefined;
+        if (!queriesPickedMessageToAgent[messageId]) {
+            queriesPickedMessageToAgent[queriesPickedAgentToMessage[agentId]] = null;
+            queriesPickedMessageToAgent[messageId] = agentId;
+            queriesPickedAgentToMessage[agentId] = messageId;
+            socket.emit('agentPickedQuestion', { message: 'Picked Question Successfully', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
+        }
+        // else if (queriesPickedAgentToMessage[agentId] & !queriesPickedMessageToAgent[messageId]) {
+        //     queriesPickedMessageToAgent[queriesPickedAgentToMessage[agentId]] = null;
         //     queriesPickedMessageToAgent[messageId] = agentId;
         //     queriesPickedAgentToMessage[agentId] = messageId;
         //     console.log(queriesPickedMessageToAgent);
         //     console.log(queriesPickedAgentToMessage);
         //     socket.emit('agentPickedQuestion', { message: 'Picked Question Successfully and dropend previous one', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
         // }
-        // else {
-        //     socket.emit('agentPickedQuestion', { message: 'Question Picked By Another Agent', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
-        // }
+        else {
+            socket.emit('agentPickedQuestion', { message: 'Question Picked By Another Agent', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
+        }
     });
     socket.on('disconnect', () => { });
 });
