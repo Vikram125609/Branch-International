@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { socket } from "../../socket";
 import { useNavigate } from "react-router-dom";
 import { replyToClient } from "../../Api";
+import Question from "../Question/Question";
+import Pending from "../Question/Pending";
 const Home = () => {
     const navigate = useNavigate();
     const [chat, setChat] = useState('');
@@ -129,9 +131,15 @@ const Home = () => {
             navigate('/');
         }
         else {
-            if (localStorage.getItem('role') === 'Client') {
+            if (localStorage.getItem('role') === 'Client' || localStorage.getItem('role') === 'Agent') {
                 if (!socket.connected) {
                     socket.connect();
+                    const url = new URL(window.location.href);
+                    const params = new URLSearchParams(url.search);
+                    const data = {
+                        roomType: params.get('roomType')
+                    }
+                    socket.emit('agentJoinRoom', data)
                 }
             }
         }
@@ -178,7 +186,7 @@ const Home = () => {
         }
     }
     return (
-        <div className="bg-slate-600 h-screen">
+        <div style={{ height: '100%' }} className="bg-slate-600">
             <h1 style={{ lineHeight: '5vh' }} className="text-center text-white">{localStorage.getItem('role')}</h1>
             <div className="flex flex-row items-center justify-between">
                 {
@@ -196,6 +204,12 @@ const Home = () => {
                     <input onChange={handleChange} value={searchByClientMessage} style={{ fontSize: '2vh' }} className="p-2 rounded" type="text" name="searchByClientMessage" id="" placeholder="Search By Message" />
                 </div>
             </div>
+            {
+                localStorage.getItem('role') === 'Client' ? (<Question />) : (<span></span>)
+            }
+            {
+                localStorage.getItem('role') === 'Agent' ? (<Pending />) : (<span></span>)
+            }
             <div className="flex flex-col">
                 <div style={{ height: `${localStorage.getItem('role') === 'Agent' ? '80vh' : '80vh'}`, width: '100vw' }} className="overflow-auto">
                     {

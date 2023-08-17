@@ -10,7 +10,7 @@ const { register } = require("./controller/register");
 const highPriorityMessage = require("./model/highPriorityMessage");
 const midPriorityMessage = require("./model/midPriorityMessage");
 const lowPriorityMessage = require("./model/lowPriorityMessage");
-const { totalPendingQuery, replyToClient } = require("./controller/query");
+const { totalPendingQuery, replyToClient, fetchPreviousQuestion, fetchPendingQuestion, replyToPendingQuestion } = require("./controller/query");
 
 const io = new Server(server, {
     cors: {
@@ -27,6 +27,9 @@ app.use(cors({
 app.post('/register', register);
 app.get('/totalPendingQuery', totalPendingQuery);
 app.post('/replyToClient', replyToClient)
+app.post('/fetchPreviousQuestion', fetchPreviousQuestion);
+app.post('/fetchPendingQuestion', fetchPendingQuestion);
+app.post('/replyToPendingQuestion', replyToPendingQuestion);
 
 const queriesPickedMessageToAgent = {}
 const queriesPickedAgentToMessage = {}
@@ -39,7 +42,7 @@ io.on('connection', (socket) => {
     if (role === 'Agent') {
         socket.join('Agent');
     }
-    socket.on('clientSendQuery', (data) => {
+    socket.on('clientSendQuery', async (data) => {
         const regex1 = new RegExp('Loan', 'i');
         const regex2 = new RegExp('Payment', 'i');
         const regex3 = new RegExp('Pay', 'i');
@@ -51,7 +54,8 @@ io.on('connection', (socket) => {
                 clientId: data?._id,
                 query: data?.chat
             });
-            message.save().then(() => { });
+            // message.save().then(() => { });
+            await message.save();
             data = { ...data, messageId: message._id.toString() };
             socket.to('highPriorityRoom').emit('queryInHighPriorityRoom', data);
         }
@@ -63,7 +67,8 @@ io.on('connection', (socket) => {
                 clientId: data?._id,
                 query: data?.chat
             });
-            message.save().then(() => { });
+            // message.save().then(() => { });
+            await message.save();
             data = { ...data, messageId: message._id.toString() };
             socket.to('mediumPriorityRoom').emit('queryInMediumPriorityRoom', data);;
         }
@@ -75,21 +80,30 @@ io.on('connection', (socket) => {
                 clientId: data?._id,
                 query: data?.chat
             });
-            message.save().then(() => { });
+            // message.save().then(() => { });
+            await message.save();
             data = { ...data, messageId: message._id.toString() };
             socket.to('lowPriorityRoom').emit('queryInLowPriorityRoom', data);;
         }
         const totalPendingQuery = [];
-        lowPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
-            totalPendingQuery.push(data);
-            midPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
-                totalPendingQuery.push(data);
-                highPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
-                    totalPendingQuery.push(data);
-                    io.to('Agent').emit('agentReceiveQuery', { totalPendingQuery });
-                })
-            })
-        })
+        const count1 = await lowPriorityMessage.find({ ans: [] }).countDocuments();
+        const count2 = await midPriorityMessage.find({ ans: [] }).countDocuments();
+        const count3 = await highPriorityMessage.find({ ans: [] }).countDocuments();
+        totalPendingQuery.push(count1);
+        totalPendingQuery.push(count2);
+        totalPendingQuery.push(count3);
+        io.to('Agent').emit('agentReceiveQuery', { totalPendingQuery });
+        // lowPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
+        //     totalPendingQuery.push(data);
+        //     midPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
+        //         totalPendingQuery.push(data);
+        //         highPriorityMessage.find({ ans: [] }).countDocuments().then((data) => {
+        //             totalPendingQuery.push(data);
+        //             io.to('Agent').emit('agentReceiveQuery', { totalPendingQuery });
+        //         })
+        //     })
+        // })
+
     });
     socket.on('agentAnswerQuery', (data) => {
         socket.to(data.clientId).emit('clientReceiveAnswer', data);
