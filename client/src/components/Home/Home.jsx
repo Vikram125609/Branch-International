@@ -9,6 +9,10 @@ const Home = () => {
     const [replyClientId, setReplyClientId] = useState('');
     const [messageId, setMessageId] = useState('');
     const [replyMessagePriority, setReplyMessagePriority] = useState('');
+    const [queriesPickedByAgent, setQueriesPickedByAgent] = useState({});
+    const [searchByClientId, setSearchByClientId] = useState('');
+    const [searchByClientName, setSearchByClientName] = useState('');
+    const [searchByClientMessage, setSearchByClientMessage] = useState('');
     const handleQuery = (e) => {
         setChat(e.target.value);
     };
@@ -56,9 +60,23 @@ const Home = () => {
             setChat('');
         }
     };
+    const handleChange = (e) => {
+        if (e.target.name === "searchByClientId") {
+            setSearchByClientId(e.target.value);
+        }
+        else if (e.target.name === "searchByClientName") {
+            setSearchByClientName(e.target.value);
+        }
+        else {
+            setSearchByClientMessage(e.target.value);
+        }
+
+    };
     const pick = (messageId) => {
+        const url = new URL(window.location.href);
+        const params = new URLSearchParams(url.search);
         const data = {
-            messageId, agentId: localStorage.getItem('_id')
+            messageId, agentId: localStorage.getItem('_id'), roomType: params.get('roomType')
         }
         socket.emit('agentPickQuestion', data)
     };
@@ -73,7 +91,8 @@ const Home = () => {
             });
         });
         socket.on('agentPickedQuestion', (data) => {
-            console.log(data);
+            const { message, queriesPickedMessageToAgent, queriesPickedAgentToMessage } = data;
+            setQueriesPickedByAgent(queriesPickedMessageToAgent);
         });
         return () => {
             socket.removeListener('clientReceiveAnswer');
@@ -125,59 +144,71 @@ const Home = () => {
             socket.emit('agentLeaveRoom', data);
         }
     }, [navigate]);
+    const filterByClientId = (data) => {
+        if (searchByClientId) {
+            const regex = new RegExp(searchByClientId, 'i');
+            if (regex.test(data._id)) {
+                return data;
+            }
+        }
+        else {
+            return data;
+        }
+    }
+    const filterByClientName = (data) => {
+        if (searchByClientName) {
+            const regex = new RegExp(searchByClientName, 'i');
+            if (regex.test(data.name)) {
+                return data;
+            }
+        }
+        else {
+            return data;
+        }
+    }
+    const filterByClientMessage = (data) => {
+        if (searchByClientMessage) {
+            const regex = new RegExp(searchByClientMessage, 'i');
+            if (regex.test(data.chat)) {
+                return data;
+            }
+        }
+        else {
+            return data;
+        }
+    }
     return (
         <div className="bg-slate-600 h-screen">
             <h1 style={{ lineHeight: '5vh' }} className="text-center text-white">{localStorage.getItem('role')}</h1>
-            {
-                localStorage.getItem('role') === 'Agent' ? (<button onClick={backToRoom} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Back
-                </button>) : (<span></span>)
-            }
-            <div className="flex flex-col">
-                <div style={{ height: `${localStorage.getItem('role') === 'Agent' ? '80vh' : '85vh'}`, width: '100vw' }} className="">
+            <div className="flex flex-row items-center justify-between">
+                {
+                    localStorage.getItem('role') === 'Agent' ? (<button onClick={backToRoom} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        Back
+                    </button>) : (<span></span>)
+                }
+                <div className="flex flex-row items-center space-x-2">
                     {
-                        chatHistory.map((message, id) => {
-                            return (
-                                <div key={id}>
-                                    {
-                                        localStorage.getItem('_id') === message._id ?
-                                            (<div className="flex flex-row justify-end p-1">
-                                                {
-                                                    message?.priority === '0' ?
-                                                        (
-                                                            <p className="text-red-500">{message.chat}</p>
-                                                        ) :
-                                                        (
-                                                            message?.priority === '1' ?
-                                                                (
-                                                                    <p className="text-yellow-500">{message.chat}</p>
-                                                                ) :
-                                                                (
-                                                                    <p className="text-white">{message.chat}</p>
-                                                                )
-                                                        )
-                                                }
-                                                {
-                                                    message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
-                                                        (
-                                                            <button onClick={() => { setReplyClientId(message._id); setMessageId(message.messageId); setReplyMessagePriority(message.priority); }}>{replyClientId === message._id ? 'Active' : 'Reply'}</button>
-                                                        )
-                                                        : (
-                                                            <span></span>
-                                                        )
-                                                }
-                                                {
-                                                    message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
-                                                        (
-                                                            <button onClick={() => pick(message.messageId)}>Pick</button>
-                                                        )
-                                                        : (
-                                                            <span></span>
-                                                        )
-                                                }
-                                            </div>
-                                            ) : (
-                                                <div className="flex flex-row justify-start p-1">
+                        localStorage.getItem('role') === 'Agent' ? (<input onChange={handleChange} value={searchByClientId} style={{ fontSize: '2vh' }} className="p-2 rounded" type="text" name="searchByClientId" id="" placeholder="Search By Id" />) : (<span></span>)
+                    }
+                    {
+                        localStorage.getItem('role') === 'Agent' ? (<input onChange={handleChange} value={searchByClientName} style={{ fontSize: '2vh' }} className="p-2 rounded" type="text" name="searchByClientName" id="" placeholder="Search By Name" />) : (<span></span>)
+                    }
+                    <input onChange={handleChange} value={searchByClientMessage} style={{ fontSize: '2vh' }} className="p-2 rounded" type="text" name="searchByClientMessage" id="" placeholder="Search By Message" />
+                </div>
+            </div>
+            <div className="flex flex-col">
+                <div style={{ height: `${localStorage.getItem('role') === 'Agent' ? '80vh' : '80vh'}`, width: '100vw' }} className="overflow-auto">
+                    {
+                        chatHistory
+                            .filter(filterByClientId)
+                            .filter(filterByClientName)
+                            .filter(filterByClientMessage)
+                            .map((message, id) => {
+                                return (
+                                    <div key={id}>
+                                        {
+                                            localStorage.getItem('_id') === message._id ?
+                                                (<div style={{ marginTop: '1em', marginBottom: '1em' }} className="bg-slate-500 flex flex-row justify-end p-2 shadow rounded">
                                                     {
                                                         message?.priority === '0' ?
                                                             (
@@ -196,27 +227,59 @@ const Home = () => {
                                                     {
                                                         message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
                                                             (
-                                                                <button onClick={() => { setReplyClientId(message._id); setMessageId(message.messageId); setReplyMessagePriority(message.priority); }} style={{ backgroundColor: 'rgba(46, 204, 113)' }} className="rounded-full text-white mx-1 px-1" >{replyClientId === message._id ? 'Active' : 'Reply'}</button>
-                                                            )
-                                                            : (
-                                                                <span></span>
-                                                            )
-                                                    }
-                                                    {
-                                                        message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
-                                                            (
-                                                                <button onClick={() => pick(message.messageId)} style={{ backgroundColor: 'rgba(46, 204, 113)' }} className="rounded-full text-white mx-1 px-1">Pick</button>
+                                                                <button style={{ backgroundColor: 'rgba(46, 204, 113)' }} className="rounded-full text-white mx-1 px-1" onClick={() => { pick(message.messageId); setReplyClientId(message._id); setMessageId(message.messageId); setReplyMessagePriority(message.priority); }}>{queriesPickedByAgent[message.messageId] === localStorage.getItem('_id') ? 'Picked' : queriesPickedByAgent[message.messageId] != null ? 'Picked By Another Agent' : 'Pick'}</button>
                                                             )
                                                             : (
                                                                 <span></span>
                                                             )
                                                     }
                                                 </div>
-                                            )
-                                    }
-                                </div>
-                            );
-                        })
+                                                ) : (
+                                                    <div style={{ marginTop: '1em', marginBottom: '1em' }} className="bg-slate-500 flex flex-col justify-start p-2 rounded">
+                                                        {
+                                                            message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
+                                                                (
+                                                                    <div className="rounded-full text-white mx-1 px-1">
+                                                                        <p> _id {message._id}</p>
+                                                                        <p> Name {message.name}</p>
+                                                                    </div>
+                                                                )
+                                                                : (
+                                                                    <span></span>
+                                                                )
+                                                        }
+                                                        <div className="bg-slate-400 flex flex-row justify-start p-2 rounded">
+                                                            {
+                                                                message?.priority === '0' ?
+                                                                    (
+                                                                        <p className="text-red-500">{message.chat}</p>
+                                                                    ) :
+                                                                    (
+                                                                        message?.priority === '1' ?
+                                                                            (
+                                                                                <p className="text-yellow-500">{message.chat}</p>
+                                                                            ) :
+                                                                            (
+                                                                                <p className="text-white">{message.chat}</p>
+                                                                            )
+                                                                    )
+                                                            }
+                                                            {
+                                                                message?.role === 'Client' & localStorage.getItem('role') === 'Agent' ?
+                                                                    (
+                                                                        <button style={{ backgroundColor: 'rgba(46, 204, 113)' }} className="rounded-full text-white mx-1 px-1" onClick={() => { pick(message.messageId); setReplyClientId(message._id); setMessageId(message.messageId); setReplyMessagePriority(message.priority); }}>{queriesPickedByAgent[message.messageId] === localStorage.getItem('_id') ? 'Picked' : queriesPickedByAgent[message.messageId] != null ? 'Picked By Another Agent' : 'Pick'}</button>
+                                                                    )
+                                                                    : (
+                                                                        <span></span>
+                                                                    )
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                )
+                                        }
+                                    </div>
+                                );
+                            })
                     }
                 </div>
                 <div>

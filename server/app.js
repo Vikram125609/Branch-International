@@ -104,12 +104,12 @@ io.on('connection', (socket) => {
 
     });
     socket.on('agentPickQuestion', (data) => {
-        const { messageId, agentId } = data;
+        const { messageId, agentId, roomType } = data;
         if (!queriesPickedMessageToAgent[messageId]) {
             queriesPickedMessageToAgent[queriesPickedAgentToMessage[agentId]] = null;
             queriesPickedMessageToAgent[messageId] = agentId;
             queriesPickedAgentToMessage[agentId] = messageId;
-            socket.emit('agentPickedQuestion', { message: 'Picked Question Successfully', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
+            io.to(roomType).emit('agentPickedQuestion', { message: 'Agent Picked Question', queriesPickedMessageToAgent: queriesPickedMessageToAgent, queriesPickedAgentToMessage: queriesPickedAgentToMessage });
         }
         // else if (queriesPickedAgentToMessage[agentId] & !queriesPickedMessageToAgent[messageId]) {
         //     queriesPickedMessageToAgent[queriesPickedAgentToMessage[agentId]] = null;
@@ -120,7 +120,7 @@ io.on('connection', (socket) => {
         //     socket.emit('agentPickedQuestion', { message: 'Picked Question Successfully and dropend previous one', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
         // }
         else {
-            socket.emit('agentPickedQuestion', { message: 'Question Picked By Another Agent', ...queriesPickedMessageToAgent, ...queriesPickedAgentToMessage });
+            socket.emit('agentPickedQuestion', { message: 'Question Picked By Another Agent', queriesPickedMessageToAgent: queriesPickedMessageToAgent, queriesPickedAgentToMessage: queriesPickedAgentToMessage });
         }
     });
     socket.on('disconnect', () => { });
